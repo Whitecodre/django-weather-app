@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | WeatherGo</title>
+    <link rel="icon" type="image/png" href="{% static 'favicon.ico' %}">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Karla:400,700&display=swap');
+        .font-family-karla { font-family: karla; }
+        .bg-sidebar { background: #3d68ff; }
+        .cta-btn { color: #3d68ff; }
+        .upgrade-btn { background: #1947ee; }
+        .upgrade-btn:hover { background: #0038fd; }
+        .active-nav-link { background: #1947ee; }
+        .nav-item:hover { background: #1947ee; }
+        .account-link:hover { background: #3d68ff; }
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-400 to-indigo-600 min-h-screen flex items-center justify-center p-4 font-family-karla">
+    <div class="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden w-full max-w-md p-8">
+        <h1 class="text-3xl font-bold text-white text-center mb-6">WeatherGo</h1>
+        
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                Invalid username or password. Please try again.
+            </div>
+            {% endif %}
+            
+            <div>
+                <label class="block text-white text-sm font-medium mb-1">Username</label>
+                <input type="text" name="username" required
+                       class="w-full bg-white/20 backdrop-blur-lg rounded-lg border border-white/30 px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white">
+            </div>
+            
+            <div>
+                <label class="block text-white text-sm font-medium mb-1">Password</label>
+                <input type="password" name="password" required
+                       class="w-full bg-white/20 backdrop-blur-lg rounded-lg border border-white/30 px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white">
+            </div>
+            
+            <button type="submit" class="w-full bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-50 transition">
+                Sign In
+            </button>
+            
+            <div class="text-center text-white/80 text-sm mt-4">
+                Don't have an account? 
+                <a href="{% url 'signup' %}" class="text-white hover:underline font-medium">Sign Up</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

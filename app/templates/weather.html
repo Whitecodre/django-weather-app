@@ -1,0 +1,201 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home | WeatherGo</title>
+    <link rel="icon" type="image/png" href="{% static 'favicon.ico' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Karla:400,700&display=swap');
+        .font-family-karla { font-family: karla; }
+        .bg-sidebar { background: #3d68ff; }
+        .cta-btn { color: #3d68ff; }
+        .upgrade-btn { background: #1947ee; }
+        .upgrade-btn:hover { background: #0038fd; }
+        .active-nav-link { background: #1947ee; }
+        .nav-item:hover { background: #1947ee; }
+        .account-link:hover { background: #3d68ff; }
+    </style>
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = "{{ csrf_token }}";
+        });
+    </script>
+</head>
+<body class="bg-gradient-to-br from-blue-400 to-indigo-600 min-h-screen flex items-center justify-center p-4 font-family-karla">
+    {% if request.user.is_authenticated %}
+    <div class="absolute top-4 right-4">
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="text-white hover:underline">
+                Logout ({{ request.user.username }})
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if messages %}
+    <div class="fixed top-4 right-4 z-50 space-y-2">
+        {% for message in messages %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline">{{ message }}</span>
+            <button class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="this.parentElement.remove()">
+                <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden w-full max-w-md">
+        <div class="p-6">
+            <form method="GET" class="flex items-center bg-white/20 rounded-full px-4 py-2">
+                <input 
+                    type="text" 
+                    name="city"
+                    placeholder="Search city..." 
+                    class="bg-transparent border-none outline-none w-full text-white placeholder-white/70"
+                    value="{{ current.city|default:'' }}{% if current.country %},{{ current.country }}{% endif %}"
+                >
+                <button type="submit" class="bg-white/30 hover:bg-white/40 p-2 rounded-full transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </form>
+            {% if request.user.is_authenticated and recent_searches %}
+            <div class="mt-3 text-sm text-white/70">
+                Recent: {% for city in recent_searches %}<a href="?city={{ city }}" class="hover:underline mr-2">{{ city }}</a>{% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if error %}
+        <div class="px-6 text-red-200">{{ error }}</div>
+        {% else %}
+        <div class="px-6 pb-8 text-white text-center">
+            <div class="mb-2">
+                <h1 class="text-2xl font-bold">{{ current.city }}, {{ current.country }}</h1>
+                <p class="text-white/80">{{ current.timestamp|date:"l, M j, Y" }}</p>
+            </div>
+
+            <div class="flex justify-center items-center my-6">
+                <div class="text-6xl font-bold">{{ current.temperature|floatformat:0 }}°</div>
+                <div class="ml-4">
+                    <img src="http://openweathermap.org/img/wn/{{ current.icon }}@2x.png" alt="{{ current.conditions }}" class="w-16 h-16">
+                    <p class="capitalize mt-1">{{ current.conditions }}</p>
+                </div>
+            </div>
+
+            {% if request.user.is_authenticated %}
+            <div class="mt-6" id="favorites-section" hx-trigger="refresh from:body">
+                <h3 class="text-white text-lg font-semibold mb-2">Your Favorites</h3>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    {% for fav in favorites %}
+                    <div id="fav-{{ forloop.counter }}" class="flex items-center bg-white/20 px-3 py-1 rounded-full">
+                        <a href="?city={{ fav.city }},{{ fav.country_code }}"
+                        class="text-white hover:underline">
+                            {{ fav.city }}, {{ fav.country_code }}
+                        </a>
+                        <button hx-post="{% url 'remove_favorite' %}"
+                                hx-vals='{"city": "{{ fav.city }}", "country": "{{ fav.country_code }}"}'
+                                hx-target="#fav-{{ forloop.counter }}"
+                                hx-swap="outerHTML"
+                                class="ml-2 text-white hover:text-red-500">
+                            ✕
+                        </button>
+                    </div>
+                    {% empty %}
+                    <p class="text-white/70">No favorites yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+
+
+            <div class="mt-8">
+                <h3 class="text-white text-lg font-semibold mb-4">5-Day Forecast</h3>
+                <div class="grid grid-cols-5 gap-2">
+                    {% for day in forecast %}
+                    <div class="bg-white/10 p-2 rounded-lg text-center">
+                        <p class="font-medium">{{ day.date|date:"D" }}</p>
+                        <img src="http://openweathermap.org/img/wn/{{ day.icon }}.png" class="mx-auto w-10 h-10">
+                        <p class="mt-1 text-sm">{{ day.temp_max|floatformat:0 }}° / {{ day.temp_min|floatformat:0 }}°</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-8">
+                <div class="bg-white/10 p-4 rounded-lg">
+                    <p>Humidity</p>
+                    <p class="font-bold">{{ current.humidity }}%</p>
+                </div>
+                <div class="bg-white/10 p-4 rounded-lg">
+                    <p>Wind</p>
+                    <p class="font-bold">{{ current.wind_speed }} km/h</p>
+                </div>
+                <div class="bg-white/10 p-4 rounded-lg">
+                    <p>Pressure</p>
+                    <p class="font-bold">{{ current.pressure }} hPa</p>
+                </div>
+                <div class="bg-white/10 p-4 rounded-lg flex items-center justify-center">
+                    {% if request.user.is_authenticated %}
+                        {% if is_favorite %}
+                        <button hx-post="{% url 'remove_favorite' %}"
+                                hx-vals='{"city": "{{ current.city }}", "country": "{{ current.country }}"}'
+                                hx-target="this"
+                                hx-swap="outerHTML"
+                                class="text-yellow-400 hover:text-yellow-300 flex items-center">
+                            ★ Saved
+                        </button>
+                        {% else %}
+                        <form hx-post="{% url 'save_favorite' %}"
+                            hx-target="this"
+                            hx-swap="outerHTML"
+                            hx-trigger="click from:button">
+                            {% csrf_token %}
+                            <input type="hidden" name="city" value="{{ current.city }}">
+                            <input type="hidden" name="country" value="{{ current.country }}">
+                            <button type="submit" class="text-white hover:text-yellow-300 flex items-center">
+                                ♥ Save Location
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                    <a href="{% url 'login' %}?next={{ request.path }}" class="text-white/70 hover:text-white text-sm">
+                        Login to save locations
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.requestConfig.path.includes('favorite')) {
+                htmx.trigger('#favorites-section', 'refresh');
+            }
+        });
+    </script>
+    <script>
+        function getCookie(name) {
+            const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return m ? decodeURIComponent(m.pop()) : '';
+        }
+        document.body.addEventListener('htmx:configRequest', function (event) {
+            event.detail.headers['X-CSRFToken'] = getCookie('csrftoken');
+        });
+    </script>
+
+</body>
+</html>
