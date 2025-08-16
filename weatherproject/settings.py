@@ -100,6 +100,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# Login and logout redirect url
+LOGIN_REDIRECT_URL = '/'
+
 # Security for Render
 RENDER_EXTERNAL_HOSTNAME = os.getenv('weathergo.onrender.com')
 
